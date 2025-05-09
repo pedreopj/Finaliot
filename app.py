@@ -10,6 +10,6 @@ Este panel presenta en tiempo real las condiciones de temperatura, humedad y rad
 """)
 
 # Sustituye esta URL por el link público de tu dashboard de Grafana (public snapshot o embed)
-grafana_url = "https://your-grafana-url.com/d/abc123/microcultivo-dashboard?orgId=1&kiosk"
+grafana_url = "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser"
 
 components.iframe(grafana_url, height=800, scrolling=True)
