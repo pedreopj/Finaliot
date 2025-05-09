@@ -12,4 +12,4 @@ Este panel presenta en tiempo real las condiciones de temperatura, humedad y rad
 # Sustituye esta URL por el link público de tu dashboard de Grafana (public snapshot o embed)
 grafana_url = "https://pelaezescobarpepo.grafana.net/dashboard/snapshot/GJz1cXQWPsbofx5ekEKSdpj1hNEi0EKA"
 
-components.iframe("grafana_url" , height=800, scrolling=True)
+components.iframe("https://pelaezescobarpepo.grafana.net/dashboard/snapshot/wqETKzwr91ZKmSpulKCbBBjaCCVHWyZH" , height=800, scrolling=True)
