@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from influxdb_client import InfluxDBClient
 
-# Configuración
-st.set_page_config(page_title="🌱 Microcultivo - Datos Reales", layout="wide")
-st.title("📊 Datos Reales desde InfluxDB - Microcultivo IoT")
-st.markdown("Visualización de temperatura, calor, humedad y radiación UV en los últimos datos registrados.")
+# Configuración visual
+st.set_page_config(page_title="🌱 Microcultivo - Datos en Vivo", layout="wide")
+st.title("🌡️ Panel IoT de Microcultivo")
+st.markdown("Visualización de temperatura, calor, humedad y radiación UV capturada desde InfluxDB.")
 
 # Parámetros de conexión
 url = "https://us-east-1-1.aws.cloud2.influxdata.com"
@@ -17,7 +17,7 @@ bucket = "homeiot"
 client = InfluxDBClient(url=url, token=token, org=org)
 query_api = client.query_api()
 
-# Consulta Flux adaptada
+# Consulta adaptada
 query = f'''
 from(bucket: "{bucket}")
   |> range(start: -24h)
@@ -27,36 +27,39 @@ from(bucket: "{bucket}")
      r["_field"] == "calor" or
      r["_field"] == "humedad" or
      r["_field"] == "uv_raw"))
-  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-  |> sort(columns: ["_time"])
+  |> pivot(rowKey:["time"], columnKey: ["_field"], valueColumn: "_value")
+  |> sort(columns: ["time"])
 '''
 
-# Ejecutar y procesar
+# Ejecutar
 try:
     result = query_api.query_data_frame(org=org, query=query)
 
-    # Asegurar que es DataFrame válido
     if isinstance(result, list):
         df = pd.concat(result)
     else:
         df = result
 
-    if "_time" not in df.columns:
-        st.error("❌ No se encontró la columna `_time`. Revisa la estructura de la medición.")
-    else:
-        df = df.rename(columns={"_time": "Tiempo"}).set_index("Tiempo")
+    # Usar "time" como índice y limpiar columnas
+    if "time" in df.columns:
+        df = df.set_index("time")
         campos = ["temperatura", "calor", "humedad", "uv_raw"]
-        df = df[[c for c in campos if c in df.columns]]  # Solo columnas existentes
+        campos_disponibles = [col for col in campos if col in df.columns]
+        df = df[campos_disponibles]
 
-        st.success("✅ Datos cargados exitosamente.")
+        st.success("✅ Datos cargados correctamente.")
         st.dataframe(df.tail(50))
 
-        st.subheader("📈 Estadísticas básicas")
+        st.subheader("📈 Análisis estadístico")
         st.write(df.describe())
 
-except Exception as e:
-    st.error(f"❌ Error al consultar InfluxDB: {e}")
-
+        st.subheader("🤖 Recomendaciones automáticas")
+        if "humedad" in df.columns and df["humedad"].iloc[-1] < 40:
+            st.warning("💧 La humedad está baja. Se recomienda regar el cultivo.")
+        if "uv_raw" in df.columns and df["uv_raw"].iloc[-1] > 700:
+            st.warning("☀️ Radiación UV alta. Se recomienda proteger el cultivo con sombra.")
+    else:
+        st.error("❌ No se encontró la columna `time`. Revisa si el pivot funcionó correctamente.")
 
 except Exception as e:
     st.error(f"❌ Error al consultar InfluxDB: {e}")
