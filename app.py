@@ -1,25 +1,24 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from influxdb_client import InfluxDBClient
+import pandas as pd
 
-st.title("Dashboard Microcultivo")
+# Configuración InfluxDB
+url = "https://us-east-1-1.aws.cloud2.influxdata.com"
+token = "rnRx-Nk8dXeumEsQeDT4hk78QFWNTOVim7UrH5fnYKVSoQQIkhCwKq03-UMKN-S0Nj-DbfmrMD0HUI61qRJaiw=="
+org = "0925ccf91ab36478"
+bucket = "homeiot"
 
-paneles = [
-    ("Temperatura vs UV", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-6"),
-    ("Humedad", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-3"),
-    ("Rayos UV", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-5"),
-    ("Humedad, Temperatura y Calor", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-1"),
-    ("Temperatura", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-4"),
-    ("Calor", "https://pelaezescobarpepo.grafana.net/d/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=2025-05-15T17:00:57.815Z&to=2025-05-15T23:00:57.815Z&timezone=browser&viewPanel=panel-2"),
-]
+st.set_page_config(page_title="Microcultivo Dashboard", layout="wide")
 
-cols = st.columns(2)
+st.title("🌱 Monitoreo Ambiental de Microcultivo Urbano")
+st.markdown("Visualización en tiempo real desde Grafana y datos crudos desde InfluxDB.")
 
-for i, (titulo, url) in enumerate(paneles):
-    with cols[i % 2]:
-        st.markdown(f"### {titulo}")
-        st.markdown(
-            f"""
-            Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente.  
-            [Haz clic aquí para abrir el panel en una nueva pestaña.]({url})
-            """,
-            unsafe_allow_html=True,
-        )
+# Lista con los iframes de los 6 paneles de Grafana
+grafana_iframes = [
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser&panelId=6",
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser&panelId=3",
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser&panelId=5",
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser&panelId=1",
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=now-6h&to=now&timezone=browser&panelId=4",
+    "https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4
