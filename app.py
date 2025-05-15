@@ -25,5 +25,6 @@ for i, (titulo, url) in enumerate(paneles):
         )
 
 
+
 except Exception as e:
     st.error(f"❌ Error al consultar InfluxDB: {e}")
