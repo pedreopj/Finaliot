@@ -1,18 +1,22 @@
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from influxdb_client import InfluxDBClient
 
-# Configura tus credenciales
+# Configuración de la app
+st.set_page_config(page_title="🌱 Microcultivo - Datos Reales", layout="wide")
+st.title("📊 Datos Reales desde InfluxDB - Microcultivo IoT")
+st.markdown("Consulta de los últimos datos de sensores desde la base de datos.")
+
+# Conexión a InfluxDB
 url = "https://us-east-1-1.aws.cloud2.influxdata.com"
-token = "TrnRx-Nk8dXeumEsQeDT4hk78QFWNTOVim7UrH5fnYKVSoQQIkhCwKq03-UMKN-S0Nj-DbfmrMD0HUI61qRJaiw=="
+token = "rnRx-Nk8dXeumEsQeDT4hk78QFWNTOVim7UrH5fnYKVSoQQIkhCwKq03-UMKN-S0Nj-DbfmrMD0HUI61qRJaiw=="
 org = "0925ccf91ab36478"
 bucket = "homeiot"
 
-# Crea cliente
 client = InfluxDBClient(url=url, token=token, org=org)
+query_api = client.query_api()
 
-# Escribe tu consulta Flux (ejemplo: últimos 24h de datos)
+# Consulta Flux
 query = f'''
 from(bucket: "{bucket}")
   |> range(start: -24h)
@@ -21,20 +25,23 @@ from(bucket: "{bucket}")
   |> sort(columns: ["_time"])
 '''
 
-# Ejecuta la consulta y convierte a DataFrame
-query_api = client.query_api()
-tables = query_api.query_data_frame(org=org, query=query)
+# Ejecutar la consulta
+try:
+    result = query_api.query_data_frame(org=org, query=query)
+    if isinstance(result, list):
+        df = pd.concat(result)
+    else:
+        df = result
 
-# Unifica los resultados si vienen divididos por tabla
-if isinstance(tables, list):
-    data = pd.concat(tables)
-else:
-    data = tables
+    df = df.rename(columns={"_time": "Tiempo"}).set_index("Tiempo")
+    st.success("✅ Datos cargados exitosamente.")
+    st.dataframe(df.tail(50))  # Mostrar últimos 50 datos
 
-# Opcional: formatea tiempo como índice
-data = data.rename(columns={"_time": "Tiempo"}).set_index("Tiempo")
+    # Mostrar algunas estadísticas básicas
+    st.subheader("📈 Estadísticas generales")
+    st.write(df.describe())
 
-st.title("🌿 Datos Reales desde InfluxDB")
-st.dataframe(data.tail(50))  # Mostrar los últimos 50 datos
+except Exception as e:
+    st.error(f"❌ Error al consultar InfluxDB: {e}")
 
 
