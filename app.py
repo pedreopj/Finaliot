@@ -8,8 +8,7 @@ st.markdown("Este panel muestra una visualización en tiempo real desde Grafana.
 
 # ⚠️ El iframe de Grafana se embebe aquí
 grafana_iframe = """
-<iframe src="https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=1746731191288&to=1746752791288&timezone=browser&panelId=1&__feature.dashboardSceneSolo" width="450" height="200" frameborder="0"></iframe>
-"""
+<iframe src="https://pelaezescobarpepo.grafana.net/d-solo/65d15f92-4084-4ea5-ac44-a08c4c2e16cf/trabajo-final?orgId=1&from=1747328457815&to=1747350057815&timezone=browser&panelId=6&__feature.dashboardSceneSolo" width="450" height="200" frameborder="0"></iframe>"""
 
 # Insertar el iframe usando components.html
 components.html(grafana_iframe, height=220)
