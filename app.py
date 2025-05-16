@@ -111,3 +111,34 @@ if uv_raw is not None:
 else:
     st.info("No se encontraron datos de radiación UV.")
 
+# Umbrales para recomendaciones
+UMBRAL_HUMEDAD = 40  # ejemplo: humedad en % bajo la cual se recomienda riego
+UMBRAL_UV = 6        # ejemplo: índice UV alto que recomienda protección
+
+# Extraer valores promedio para humedad y UV de los datos crudos
+if not df.empty:
+    pivot_df = df.pivot(index="time", columns="field", values="value")
+    
+    # Calcular valores promedio últimos 60 minutos
+    humedad_promedio = pivot_df.get("humidity", pd.Series()).mean()
+    
+    # Para UV, necesitamos traer esos datos, por ahora lo dejamos None
+    uv_promedio = None
+    
+    st.markdown("### Recomendaciones automáticas para el cuidado del microcultivo")
+    
+    if humedad_promedio is not None:
+        if humedad_promedio < UMBRAL_HUMEDAD:
+            st.success(f"Humedad promedio baja ({humedad_promedio:.1f}%). Se recomienda regar los microcultivos.")
+        else:
+            st.info(f"Humedad promedio adecuada ({humedad_promedio:.1f}%).")
+    else:
+        st.warning("No hay datos de humedad para generar recomendaciones.")
+    
+    if uv_promedio is not None:
+        if uv_promedio > UMBRAL_UV:
+            st.warning(f"Índice UV alto ({uv_promedio:.1f}). Se recomienda proteger los cultivos con sombra.")
+        else:
+            st.info(f"Índice UV bajo ({uv_promedio:.1f}).")
+    else:
+        st.warning("No hay datos de radiación UV para generar recomendaciones.")
