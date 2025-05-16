@@ -20,17 +20,21 @@ def query_raw_data(range_minutes=60):
     '''
     
     result = query_api.query_data_frame(query)
-    if result.empty:
+    
+    if not result or (isinstance(result, list) and len(result) == 0):
         return pd.DataFrame()
+    
+    if isinstance(result, list):
+        df = pd.concat(result)
     else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
-        
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
+        df = result
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
 def query_uv_data(range_minutes=60):
     client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
@@ -44,23 +48,28 @@ def query_uv_data(range_minutes=60):
     '''
     
     result = query_api.query_data_frame(query)
-    if result.empty:
+    
+    if not result or (isinstance(result, list) and len(result) == 0):
         return pd.DataFrame()
+    
+    if isinstance(result, list):
+        df = pd.concat(result)
     else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
-        
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
+        df = result
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
 # Streamlit app
 st.title("Dashboard Microcultivo")
 
 # Mostrar solo el panel público de Grafana
 grafana_url = "https://pelaezescobarpepo.grafana.net/public-dashboards/134b2fe792144aacaba5fed6a61d18ae"
+
 st.markdown(
     f"""
     ### Panel Público Grafana  
@@ -70,45 +79,45 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Mostrar datos crudos de aire
-st.markdown("### Datos crudos desde InfluxDB (últimos 60 minutos) - aire")
+# Mostrar datos crudos de InfluxDB (airSensor)
+st.markdown("### Datos crudos desde InfluxDB (airSensor, últimos 60 minutos)")
+
 df_air = query_raw_data(60)
+
 if df_air.empty:
-    st.write("No hay datos recientes para mostrar.")
+    st.write("No hay datos recientes para mostrar de airSensor.")
 else:
     pivot_air = df_air.pivot(index="time", columns="field", values="value")
     st.dataframe(pivot_air)
 
-# Mostrar datos crudos UV
-st.markdown("### Datos crudos desde InfluxDB (últimos 60 minutos) - radiación UV")
+# Mostrar datos crudos de InfluxDB (uv_sensor)
+st.markdown("### Datos crudos desde InfluxDB (uv_sensor, últimos 60 minutos)")
+
 df_uv = query_uv_data(60)
+
 if df_uv.empty:
-    st.write("No hay datos recientes de UV para mostrar.")
+    st.write("No hay datos recientes para mostrar de uv_sensor.")
 else:
     pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
     st.dataframe(pivot_uv)
 
-# Recomendaciones automáticas
-st.markdown("### Recomendaciones para el cuidado de los microcultivos")
+# Recomendaciones automatizadas
+st.markdown("### Recomendaciones automatizadas para el cuidado de los microcultivos")
 
-humedad_promedio = pivot_air["humidity"].mean() if not df_air.empty and "humidity" in pivot_air else None
-uv_promedio = pivot_uv["uv_raw"].mean() if not df_uv.empty and "uv_raw" in pivot_uv else None
-
-if humedad_promedio is not None:
-    if humedad_promedio < 40:
-        st.warning(f"Humedad promedio baja ({humedad_promedio:.1f}%). Se recomienda regar los cultivos.")
+if not df_air.empty and not df_uv.empty:
+    latest_humidity = pivot_air['humidity'].iloc[-1]
+    latest_uv_raw = pivot_uv['uv_raw'].iloc[-1]
+    
+    if latest_humidity < 40:
+        st.write("- La humedad está baja. **Recomendación:** Regar los cultivos.")
     else:
-        st.success(f"Humedad promedio adecuada ({humedad_promedio:.1f}%).")
-
-else:
-    st.info("No hay datos de humedad suficientes para recomendaciones.")
-
-if uv_promedio is not None:
-    if uv_promedio > 5:
-        st.warning(f"Radiación UV alta ({uv_promedio:.1f}). Se recomienda proteger los cultivos con sombra.")
+        st.write("- La humedad está en un nivel adecuado.")
+    
+    if latest_uv_raw > 200:
+        st.write("- La radiación UV es alta. **Recomendación:** Proteger los cultivos con sombra.")
     else:
-        st.success(f"Radiación UV adecuada ({uv_promedio:.1f}).")
-
+        st.write("- La radiación UV es baja o moderada.")
 else:
-    st.info("No hay datos de radiación UV suficientes para recomendaciones.")
+    st.write("No hay datos suficientes para generar recomendaciones.")
+
 
