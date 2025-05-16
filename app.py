@@ -20,17 +20,23 @@ def query_raw_data(range_minutes=60):
     '''
     
     result = query_api.query_data_frame(query)
-    if not result or (isinstance(result, list) and len(result) == 0):
+    
+    if result is None:
         return pd.DataFrame()
+    
+    if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
+        df = pd.concat(result)
     else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
-        
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
+        df = result
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
 def query_uv_data(range_minutes=60):
     client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
@@ -44,17 +50,23 @@ def query_uv_data(range_minutes=60):
     '''
     
     result = query_api.query_data_frame(query)
-    if not result or (isinstance(result, list) and len(result) == 0):
+    
+    if result is None:
         return pd.DataFrame()
+    
+    if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
+        df = pd.concat(result)
     else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
-        
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
+        df = result
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
 # Streamlit app
 st.title("Dashboard Microcultivo")
@@ -77,46 +89,44 @@ st.markdown("### Datos crudos desde InfluxDB (últimos 60 minutos)")
 df_air = query_raw_data(60)
 df_uv = query_uv_data(60)
 
-if df_air.empty:
-    st.write("No hay datos recientes de temperatura, humedad o calor para mostrar.")
+if df_air.empty and df_uv.empty:
+    st.write("No hay datos recientes para mostrar.")
 else:
-    pivot_air = df_air.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_air)
-
-if df_uv.empty:
-    st.write("No hay datos recientes de radiación UV para mostrar.")
-else:
-    pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_uv)
-
-# Recomendaciones automáticas
-
-# Últimos valores (tomamos el último valor disponible en cada dataframe)
-humedad_ultimo = None
-uv_index_ultimo = None
-
-if not df_air.empty:
-    df_air_sorted = df_air.sort_values("time")
-    humedad_ultimo = df_air_sorted[df_air_sorted["field"] == "humidity"]["value"].iloc[-1] if not df_air_sorted[df_air_sorted["field"] == "humidity"].empty else None
-
-if not df_uv.empty:
-    df_uv_sorted = df_uv.sort_values("time")
-    uv_index_ultimo = df_uv_sorted[df_uv_sorted["field"] == "uv_index"]["value"].iloc[-1] if not df_uv_sorted[df_uv_sorted["field"] == "uv_index"].empty else None
-
-st.markdown("### Recomendaciones para el cuidado del microcultivo")
-
-if humedad_ultimo is not None and not pd.isna(humedad_ultimo):
-    if humedad_ultimo < 40:  # Umbral ejemplo, ajusta según necesidad
-        st.write("💧 La humedad está baja. Se recomienda regar los microcultivos.")
+    # Mostrar tabla datos aire (humedad, temp, heat_index)
+    if not df_air.empty:
+        pivot_air = df_air.pivot(index="time", columns="field", values="value")
+        st.markdown("#### Datos aire (temperatura, humedad, heat index)")
+        st.dataframe(pivot_air)
     else:
-        st.write("🌱 La humedad está adecuada.")
-else:
-    st.write("No hay datos de humedad para evaluar recomendaciones.")
-
-if uv_index_ultimo is not None and not pd.isna(uv_index_ultimo):
-    if uv_index_ultimo > 6:  # Umbral ejemplo de UV alto
-        st.write("🛡️ La radiación UV es alta. Se recomienda proteger los cultivos con sombra.")
+        st.write("No hay datos recientes del sensor de aire.")
+    
+    # Mostrar tabla datos UV
+    if not df_uv.empty:
+        pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
+        st.markdown("#### Datos UV (uv_index, uv_raw)")
+        st.dataframe(pivot_uv)
     else:
-        st.write("☀️ La radiación UV está en niveles seguros.")
-else:
-    st.write("No hay datos de radiación UV para evaluar recomendaciones.")
+        st.write("No hay datos recientes del sensor UV.")
+
+    # Recomendaciones automatizadas
+    st.markdown("### Recomendaciones para el cuidado de los microcultivos")
+
+    # Para la recomendación tomamos el último valor registrado
+    humedad_ultimo = pivot_air["humidity"].iloc[-1] if ("humidity" in pivot_air.columns and not pivot_air["humidity"].empty) else None
+    uv_index_ultimo = pivot_uv["uv_index"].iloc[-1] if ("uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty) else None
+
+    if humedad_ultimo is not None:
+        if humedad_ultimo < 40:  # Umbral ejemplo, ajusta según necesidad
+            st.write("💧 La humedad está baja. Se recomienda regar los microcultivos.")
+        else:
+            st.write("🌱 La humedad está adecuada.")
+    else:
+        st.write("No hay datos de humedad para evaluar recomendaciones.")
+
+    if uv_index_ultimo is not None:
+        if uv_index_ultimo > 6:  # Umbral ejemplo de UV alto
+            st.write("🛡️ La radiación UV es alta. Se recomienda proteger los cultivos con sombra.")
+        else:
+            st.write("☀️ La radiación UV está en niveles seguros.")
+    else:
+        st.write("No hay datos de radiación UV para evaluar recomendaciones.")
