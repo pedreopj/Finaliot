@@ -82,4 +82,3 @@ else:
     else:
         st.write("No hay datos de radiación UV para evaluar recomendaciones.")
 
-        st.write("☀️ La radiación UV está en niveles seguros.")
