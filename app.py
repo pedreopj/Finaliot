@@ -21,11 +21,17 @@ def query_data(measurement, fields, range_minutes=60):
     '''
     
     result = query_api.query_data_frame(query)
-    if not result or (isinstance(result, list) and len(result) == 0):
+    
+    if result is None:
         return pd.DataFrame()
+    if isinstance(result, list) and len(result) == 0:
+        return pd.DataFrame()
+    
     df = pd.concat(result) if isinstance(result, list) else result
+    
     if df.empty:
         return pd.DataFrame()
+    
     df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
     return df[["time", "field", "value"]]
 
