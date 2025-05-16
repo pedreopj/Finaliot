@@ -46,6 +46,9 @@ st.markdown(
 df_air = query_data("airSensor", ["heat_index", "humidity", "temperature"])
 df_uv = query_data("uv_sensor", ["uv_index", "uv_raw"])
 
+pivot_air = None
+pivot_uv = None
+
 if df_air.empty and df_uv.empty:
     st.write("No hay datos recientes para mostrar.")
 else:
@@ -65,8 +68,13 @@ else:
 
     st.markdown("### Recomendaciones para el cuidado de los microcultivos")
 
-    humedad_ultimo = pivot_air["humidity"].iloc[-1] if "humidity" in pivot_air.columns and not pivot_air["humidity"].empty else None
-    uv_index_ultimo = pivot_uv["uv_index"].iloc[-1] if "uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty else None
+    humedad_ultimo = None
+    if pivot_air is not None and "humidity" in pivot_air.columns and not pivot_air["humidity"].empty:
+        humedad_ultimo = pivot_air["humidity"].iloc[-1]
+
+    uv_index_ultimo = None
+    if pivot_uv is not None and "uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty:
+        uv_index_ultimo = pivot_uv["uv_index"].iloc[-1]
 
     if humedad_ultimo is not None and humedad_ultimo < 40:
         st.write("💧 La humedad está baja. Se recomienda regar los microcultivos.")
@@ -81,4 +89,3 @@ else:
         st.write("☀️ La radiación UV está en niveles seguros.")
     else:
         st.write("No hay datos de radiación UV para evaluar recomendaciones.")
-
