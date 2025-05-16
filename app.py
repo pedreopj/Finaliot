@@ -8,17 +8,17 @@ INFLUX_TOKEN = "rnRx-Nk8dXeumEsQeDT4hk78QFWNTOVim7UrH5fnYKVSoQQIkhCwKq03-UMKN-S0
 ORG = "0925ccf91ab36478"
 BUCKET = "homeiot"
 
-def query_raw_data(range_minutes=60):
+def query_air_sensor_data(range_minutes=60):
     client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
     query_api = client.query_api()
-    
+
     query = f'''
     from(bucket: "{BUCKET}")
       |> range(start: -{range_minutes}m)
       |> filter(fn: (r) => r._measurement == "airSensor")
       |> filter(fn: (r) => r._field == "heat_index" or r._field == "humidity" or r._field == "temperature")
     '''
-    
+
     result = query_api.query_data_frame(query)
     if result.empty:
         return pd.DataFrame()
@@ -27,7 +27,31 @@ def query_raw_data(range_minutes=60):
             df = pd.concat(result)
         else:
             df = result
-        
+
+        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+        df = df[["time", "field", "value"]]
+        return df
+
+def query_uv_sensor_data(range_minutes=60):
+    client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
+    query_api = client.query_api()
+
+    query = f'''
+    from(bucket: "{BUCKET}")
+      |> range(start: -{range_minutes}m)
+      |> filter(fn: (r) => r._measurement == "uv_sensor")
+      |> filter(fn: (r) => r._field == "uv_index" or r._field == "uv_raw")
+    '''
+
+    result = query_api.query_data_frame(query)
+    if result.empty:
+        return pd.DataFrame()
+    else:
+        if isinstance(result, list):
+            df = pd.concat(result)
+        else:
+            df = result
+
         df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
         df = df[["time", "field", "value"]]
         return df
@@ -35,7 +59,6 @@ def query_raw_data(range_minutes=60):
 # Streamlit app
 st.title("Dashboard Microcultivo")
 
-# Mostrar solo el panel público de Grafana
 grafana_url = "https://pelaezescobarpepo.grafana.net/public-dashboards/134b2fe792144aacaba5fed6a61d18ae"
 
 st.markdown(
@@ -47,17 +70,24 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Mostrar datos crudos de InfluxDB
-st.markdown("### Datos crudos desde InfluxDB (últimos 60 minutos)")
+# Datos crudos Air Sensor
+st.markdown("### Datos crudos desde InfluxDB: Temperatura, Humedad y Calor (últimos 60 minutos)")
+df_air = query_air_sensor_data(60)
 
-df = query_raw_data(60)
-
-if df.empty:
+if df_air.empty:
     st.write("No hay datos recientes para mostrar.")
 else:
-    pivot_df = df.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_df)
+    pivot_air = df_air.pivot(index="time", columns="field", values="value")
+    st.dataframe(pivot_air)
 
+# Datos crudos UV Sensor
+st.markdown("### Datos crudos desde InfluxDB: UV Index y UV Raw (últimos 60 minutos)")
+df_uv = query_uv_sensor_data(60)
 
+if df_uv.empty:
+    st.write("No hay datos recientes para mostrar.")
+else:
+    pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
+    st.dataframe(pivot_uv)
 
 
