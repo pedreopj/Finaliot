@@ -87,6 +87,7 @@ else:
 
     with col3:
         if uv_index_ultimo is not None:
+            # Cambio aquí para evitar error con f-string dentro de st.metric value
             st.metric(label="👏 Índice UV", value=round(uv_index_ultimo, 1))
         else:
             st.write("No hay datos UV.")
