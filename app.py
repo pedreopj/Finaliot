@@ -1,13 +1,3 @@
-import streamlit as st
-import pandas as pd
-from influxdb_client import InfluxDBClient
-
-# Configuración InfluxDB
-INFLUX_URL = "https://us-east-1-1.aws.cloud2.influxdata.com"
-INFLUX_TOKEN = "rnRx-Nk8dXeumEsQeDT4hk78QFWNTOVim7UrH5fnYKVSoQQIkhCwKq03-UMKN-S0Nj-DbfmrMD0HUI61qRJaiw=="
-ORG = "0925ccf91ab36478"
-BUCKET = "homeiot"
-
 def query_air_sensor_data(range_minutes=60):
     client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
     query_api = client.query_api()
@@ -20,17 +10,21 @@ def query_air_sensor_data(range_minutes=60):
     '''
 
     result = query_api.query_data_frame(query)
-    if result.empty:
-        return pd.DataFrame()
-    else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
 
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
+    if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
+        df = pd.concat(result)
+    elif hasattr(result, "empty"):
+        if result.empty:
+            return pd.DataFrame()
+        df = result
+    else:
+        return pd.DataFrame()
+
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
 def query_uv_sensor_data(range_minutes=60):
     client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=ORG)
@@ -44,50 +38,19 @@ def query_uv_sensor_data(range_minutes=60):
     '''
 
     result = query_api.query_data_frame(query)
-    if result.empty:
-        return pd.DataFrame()
+
+    if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
+        df = pd.concat(result)
+    elif hasattr(result, "empty"):
+        if result.empty:
+            return pd.DataFrame()
+        df = result
     else:
-        if isinstance(result, list):
-            df = pd.concat(result)
-        else:
-            df = result
+        return pd.DataFrame()
 
-        df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
-        df = df[["time", "field", "value"]]
-        return df
-
-# Streamlit app
-st.title("Dashboard Microcultivo")
-
-grafana_url = "https://pelaezescobarpepo.grafana.net/public-dashboards/134b2fe792144aacaba5fed6a61d18ae"
-
-st.markdown(
-    f"""
-    ### Panel Público Grafana  
-    Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente.  
-    [Haz clic aquí para abrir el panel en una nueva pestaña.]({grafana_url})
-    """,
-    unsafe_allow_html=True,
-)
-
-# Datos crudos Air Sensor
-st.markdown("### Datos crudos desde InfluxDB: Temperatura, Humedad y Calor (últimos 60 minutos)")
-df_air = query_air_sensor_data(60)
-
-if df_air.empty:
-    st.write("No hay datos recientes para mostrar.")
-else:
-    pivot_air = df_air.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_air)
-
-# Datos crudos UV Sensor
-st.markdown("### Datos crudos desde InfluxDB: UV Index y UV Raw (últimos 60 minutos)")
-df_uv = query_uv_sensor_data(60)
-
-if df_uv.empty:
-    st.write("No hay datos recientes para mostrar.")
-else:
-    pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_uv)
-
+    df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
+    df = df[["time", "field", "value"]]
+    return df
 
