@@ -39,11 +39,8 @@ st.title("Dashboard Microcultivo")
 
 grafana_url = "https://pelaezescobarpepo.grafana.net/public-dashboards/134b2fe792144aacaba5fed6a61d18ae"
 st.markdown(
-    f"""### Panel Público Grafana  
-    Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente.  
-    [Haz clic aquí para abrir el panel en una nueva pestaña.]({grafana_url})
-    """,
-    unsafe_allow_html=True,
+    f'Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente. [Haz clic aquí para abrir el panel en una nueva pestaña.]({grafana_url})',
+    unsafe_allow_html=True
 )
 
 df_air = query_data("airSensor", ["heat_index", "humidity", "temperature"])
