@@ -120,7 +120,6 @@ if uv_index_ultimo is not None and not pd.isna(uv_index_ultimo):
         st.write("☀️ La radiación UV está en niveles seguros.")
 else:
     st.write("No hay datos de radiación UV para evaluar recomendaciones.")
-
     else:
         st.write("No hay datos de radiación UV para evaluar recomendaciones.")
 
