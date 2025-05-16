@@ -21,10 +21,12 @@ def query_raw_data(range_minutes=60):
     
     result = query_api.query_data_frame(query)
     
-    if not result or (isinstance(result, list) and len(result) == 0):
+    if result is None:
         return pd.DataFrame()
     
     if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
         df = pd.concat(result)
     else:
         df = result
@@ -49,10 +51,12 @@ def query_uv_data(range_minutes=60):
     
     result = query_api.query_data_frame(query)
     
-    if not result or (isinstance(result, list) and len(result) == 0):
+    if result is None:
         return pd.DataFrame()
     
     if isinstance(result, list):
+        if len(result) == 0:
+            return pd.DataFrame()
         df = pd.concat(result)
     else:
         df = result
@@ -79,45 +83,51 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Mostrar datos crudos de InfluxDB (airSensor)
-st.markdown("### Datos crudos desde InfluxDB (airSensor, últimos 60 minutos)")
+# Mostrar datos crudos de InfluxDB
+st.markdown("### Datos crudos desde InfluxDB (últimos 60 minutos)")
 
 df_air = query_raw_data(60)
-
-if df_air.empty:
-    st.write("No hay datos recientes para mostrar de airSensor.")
-else:
-    pivot_air = df_air.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_air)
-
-# Mostrar datos crudos de InfluxDB (uv_sensor)
-st.markdown("### Datos crudos desde InfluxDB (uv_sensor, últimos 60 minutos)")
-
 df_uv = query_uv_data(60)
 
-if df_uv.empty:
-    st.write("No hay datos recientes para mostrar de uv_sensor.")
+if df_air.empty and df_uv.empty:
+    st.write("No hay datos recientes para mostrar.")
 else:
-    pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
-    st.dataframe(pivot_uv)
-
-# Recomendaciones automatizadas
-st.markdown("### Recomendaciones automatizadas para el cuidado de los microcultivos")
-
-if not df_air.empty and not df_uv.empty:
-    latest_humidity = pivot_air['humidity'].iloc[-1]
-    latest_uv_raw = pivot_uv['uv_raw'].iloc[-1]
-    
-    if latest_humidity < 40:
-        st.write("- La humedad está baja. **Recomendación:** Regar los cultivos.")
+    # Mostrar tabla datos aire (humedad, temp, heat_index)
+    if not df_air.empty:
+        pivot_air = df_air.pivot(index="time", columns="field", values="value")
+        st.markdown("#### Datos aire (temperatura, humedad, heat index)")
+        st.dataframe(pivot_air)
     else:
-        st.write("- La humedad está en un nivel adecuado.")
+        st.write("No hay datos recientes del sensor de aire.")
     
-    if latest_uv_raw > 200:
-        st.write("- La radiación UV es alta. **Recomendación:** Proteger los cultivos con sombra.")
+    # Mostrar tabla datos UV
+    if not df_uv.empty:
+        pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
+        st.markdown("#### Datos UV (uv_index, uv_raw)")
+        st.dataframe(pivot_uv)
     else:
-        st.write("- La radiación UV es baja o moderada.")
-else:
-    st.write("No hay datos suficientes para generar recomendaciones.")
+        st.write("No hay datos recientes del sensor UV.")
 
+    # Recomendaciones automatizadas
+    st.markdown("### Recomendaciones para el cuidado de los microcultivos")
+
+    # Para la recomendación tomamos el último valor registrado
+    humedad_ultimo = pivot_air["humidity"].iloc[-1] if ("humidity" in pivot_air.columns and not pivot_air["humidity"].empty) else None
+    uv_index_ultimo = pivot_uv["uv_index"].iloc[-1] if ("uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty) else None
+
+    if humedad_ultimo is not None:
+        if humedad_ultimo < 40:  # Umbral ejemplo, ajusta según necesidad
+            st.write("💧 La humedad está baja. Se recomienda regar los microcultivos.")
+        else:
+            st.write("🌱 La humedad está adecuada.")
+    else:
+        st.write("No hay datos de humedad para evaluar recomendaciones.")
+
+    if uv_index_ultimo is not None:
+        if uv_index_ultimo > 6:  # Umbral ejemplo de UV alto
+            st.write("🛡️ La radiación UV es alta. Se recomienda proteger los cultivos con sombra.")
+        else:
+            st.write("☀️ La radiación UV está en niveles seguros.")
+    else:
+        st.write("No hay datos de radiación UV para evaluar recomendaciones.")
 
