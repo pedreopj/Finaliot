@@ -86,11 +86,12 @@ else:
             st.write("No hay datos de temperatura.")
 
     with col3:
-        if uv_index_ultimo is not None:
-            # Cambio aquí para evitar error con f-string dentro de st.metric value
-            st.metric(label="👏 Índice UV", value=round(uv_index_ultimo, 1))
-        else:
-            st.write("No hay datos UV.")
+        try:
+            # Intentar convertir el valor a float y redondear
+            uv_value = float(uv_index_ultimo)
+            st.metric(label="👏 Índice UV", value=f"{uv_value:.1f}")
+        except (TypeError, ValueError):
+            st.write("No hay datos UV válidos.")
 
     # Gráficos de tendencias
     st.markdown("---")
