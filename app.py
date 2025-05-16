@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from influxdb_client import InfluxDBClient
+import matplotlib.pyplot as plt
 
 # Configuración InfluxDB
 INFLUX_URL = "https://us-east-1-1.aws.cloud2.influxdata.com"
@@ -35,14 +36,14 @@ def query_data(measurement, fields, range_minutes=60):
     df = df.rename(columns={"_time": "time", "_field": "field", "_value": "value"})
     return df[["time", "field", "value"]]
 
-st.title("Dashboard Microcultivo")
+st.set_page_config(page_title="Microcultivo Dashboard 🌿", layout="wide")
+
+st.title("🌿 Recomendaciones para el cuidado de los Microcultivos")
 
 grafana_url = "https://pelaezescobarpepo.grafana.net/public-dashboards/134b2fe792144aacaba5fed6a61d18ae"
-st.markdown(
-    f'Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente. [Haz clic aquí para abrir el panel en una nueva pestaña.]({grafana_url})',
-    unsafe_allow_html=True
-)
+st.info(f'Debido a políticas de seguridad, el panel no puede mostrarse aquí directamente. [Abrir Grafana]({grafana_url})', icon="🔗")
 
+# Consultar datos
 df_air = query_data("airSensor", ["heat_index", "humidity", "temperature"])
 df_uv = query_data("uv_sensor", ["uv_index", "uv_raw"])
 
@@ -50,42 +51,69 @@ pivot_air = None
 pivot_uv = None
 
 if df_air.empty and df_uv.empty:
-    st.write("No hay datos recientes para mostrar.")
+    st.warning("No hay datos recientes para mostrar.")
 else:
     if not df_air.empty:
         pivot_air = df_air.pivot(index="time", columns="field", values="value")
-        st.markdown("#### Datos aire (temperatura, humedad, heat index)")
-        st.dataframe(pivot_air)
-    else:
-        st.write("No hay datos recientes del sensor de aire.")
-
     if not df_uv.empty:
         pivot_uv = df_uv.pivot(index="time", columns="field", values="value")
-        st.markdown("#### Datos UV (uv_index, uv_raw)")
-        st.dataframe(pivot_uv)
+    
+    # Mostrar métricas principales en columnas
+    col1, col2, col3 = st.columns(3)
+
+    if pivot_air is not None:
+        humedad_ultimo = pivot_air["humidity"].iloc[-1] if "humidity" in pivot_air.columns and not pivot_air["humidity"].empty else None
+        temp_ultimo = pivot_air["temperature"].iloc[-1] if "temperature" in pivot_air.columns and not pivot_air["temperature"].empty else None
+        heat_index_ultimo = pivot_air["heat_index"].iloc[-1] if "heat_index" in pivot_air.columns and not pivot_air["heat_index"].empty else None
     else:
-        st.write("No hay datos recientes del sensor UV.")
+        humedad_ultimo = temp_ultimo = heat_index_ultimo = None
 
-    st.markdown("### Recomendaciones para el cuidado de los microcultivos")
-
-    humedad_ultimo = None
-    if pivot_air is not None and "humidity" in pivot_air.columns and not pivot_air["humidity"].empty:
-        humedad_ultimo = pivot_air["humidity"].iloc[-1]
-
-    uv_index_ultimo = None
-    if pivot_uv is not None and "uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty:
-        uv_index_ultimo = pivot_uv["uv_index"].iloc[-1]
-
-    if humedad_ultimo is not None and humedad_ultimo < 40:
-        st.write("💧 La humedad está baja. Se recomienda regar los microcultivos.")
-    elif humedad_ultimo is not None:
-        st.write("🌱 La humedad está adecuada.")
+    if pivot_uv is not None:
+        uv_index_ultimo = pivot_uv["uv_index"].iloc[-1] if "uv_index" in pivot_uv.columns and not pivot_uv["uv_index"].empty else None
     else:
-        st.write("No hay datos de humedad para evaluar recomendaciones.")
+        uv_index_ultimo = None
 
-    if uv_index_ultimo is not None and uv_index_ultimo > 6:
-        st.write("🛡️ La radiación UV es alta. Se recomienda proteger los cultivos con sombra.")
-    elif uv_index_ultimo is not None:
-        st.write("☀️ La radiación UV está en niveles seguros.")
+    with col1:
+        if humedad_ultimo is not None:
+            st.metric(label="💧 Humedad (%)", value=f"{humedad_ultimo:.1f}")
+        else:
+            st.write("No hay datos de humedad.")
+
+    with col2:
+        if temp_ultimo is not None:
+            st.metric(label="🌡 Temperatura (°C)", value=f"{temp_ultimo:.1f}")
+        else:
+            st.write("No hay datos de temperatura.")
+
+    with col3:
+        if uv_index_ultimo is not None:
+            st.metric(label="☀️ Índice UV", value=f"{uv_index_ultimo:.1f}")
+        else:
+            st.write("No hay datos UV.")
+
+    # Gráficos de tendencias
+    st.markdown("---")
+    st.subheader("📈 Tendencias recientes")
+
+    if pivot_air is not None:
+        fig, ax = plt.subplots(figsize=(10, 3))
+        for field in ["temperature", "humidity", "heat_index"]:
+            if field in pivot_air.columns:
+                ax.plot(pivot_air.index, pivot_air[field], label=field.capitalize())
+        ax.set_ylabel("Valor")
+        ax.legend()
+        st.pyplot(fig)
     else:
-        st.write("No hay datos de radiación UV para evaluar recomendaciones.")
+        st.write("No hay datos para graficar del sensor de aire.")
+
+    # Recomendaciones (solo humedad)
+    st.markdown("---")
+    st.subheader("🌱 Recomendaciones")
+
+    if humedad_ultimo is not None:
+        if humedad_ultimo < 40:
+            st.error("💧 La humedad está baja. Se recomienda regar los microcultivos.")
+        else:
+            st.success("🌱 La humedad está adecuada.")
+    else:
+        st.warning("No hay datos de humedad para evaluar recomendaciones.")
